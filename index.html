@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensageiro Criptografado 🔐</title>
+    <script src="https://cdn.jsdelivr.net/npm/@apinator/client@2.0.0/dist/index.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        :root { --primaria: #00887A; --escura: #075E54; --fundo: #E5DDD5; --msg-env: #DCF8C6; --msg-rec: #fff; }
+        body { background: var(--fundo); height: 100vh; overflow: hidden; }
+        .tela { display: none; height: 100vh; flex-direction: column; }
+        .ativa { display: flex; }
+        
+        /* Login */
+        .tela-login { background: linear-gradient(180deg, var(--escura), var(--primaria)); color: white; padding: 2rem; }
+        .logo { text-align: center; margin-top: 3rem; margin-bottom: 2rem; }
+        .logo span { font-size: 3rem; }
+        .logo h1 { font-size: 1.8rem; margin-top: 0.5rem; }
+        .form { margin-top: 2rem; }
+        .form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .form input {
+            width: 100%; padding: 14px; margin-bottom: 1rem; border: none; border-radius: 10px;
+            font-size: 1rem; background: rgba(255,255,255,0.2); color: white;
+        }
+        .form input::placeholder { color: rgba(255,255,255,0.7); }
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .btn-principal { background: white; color: var(--escura); }
+        .btn-principal:hover { transform: scale(0.98); }
+        .aviso { margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.8; text-align: center; }
+        
+        /* Principal */
+        .cabecalho {
+            background: var(--escura); color: white; padding: 12px 16px; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--primaria);
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
+        }
+        .status { font-size: 0.75rem; opacity: 0.8; }
+        .conectado { color: #90EE90; }
+        .desconectado { color: #FFB3B3; }
+        .novo-chat { padding: 12px 16px; background: #fff; border-bottom: 1px solid #ddd; }
+        .novo-chat input {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+            margin-bottom: 8px; font-size: 0.95rem;
+        }
+        .lista-contatos { flex: 1; overflow-y: auto; background: white; }
+        .contato {
+            display: flex; padding: 14px 16px; border-bottom: 1px solid #eee; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .contato:hover { background: #f5f5f5; }
+        .contato .dados { flex: 1; margin-left: 12px; }
+        .contato .nome { font-weight: 600; }
+        .contato .ultima { font-size: 0.85rem; color: #666; margin-top: 2px; }
+        
+        /* Conversa */
+        .voltar { cursor: pointer; font-size: 0.9rem; }
+        .area-msg {
+            flex: 1; padding: 16px; overflow-y: auto; background: var(--fundo);
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23b8b0a8' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .msg {
+            max-width: 75%; padding: 10px 14px; margin-bottom: 10px; border-radius: 18px;
+            line-height: 1.4; position: relative;
+        }
+        .enviada { background: var(--msg-env); margin-left: auto; border-bottom-right-radius: 4px; }
+        .recebida { background: var(--msg-rec); margin-right: auto; border-bottom-left-radius: 4px; }
+        .hora { font-size: 0.7rem; color: #999; text-align: right; margin-top: 4px; }
+        .digitacao {
+            display: flex; padding: 10px; background: white; gap: 8px; align-items: center; border-top: 1px solid #ddd;
+        }
+        .digitacao input {
+            flex: 1; padding: 12px 16px; border: none; border-radius: 20px; background: #f5f5f5;
+            font-size: 0.95rem; outline: none;
+        }
+        .btn-enviar {
+            width: 44px; height: 44px; border-radius: 50%; background: var(--primaria);
+            color: white; border: none; font-size: 1.2rem; cursor: pointer;
+        }
+        
+        /* Modais */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+            display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+        }
+        .modal-conteudo {
+            background: white; padding: 24px; border-radius: 16px; max-width: 400px; width: 100%; color: #333;
+        }
+        .modal-conteudo h3 { margin-bottom: 16px; }
+        .modal-conteudo input {
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;
+        }
+        .botoes { display: flex; gap: 10px; margin-top: 10px; }
+        .botoes button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-primario { background: var(--primaria); color: white; }
+        .btn-secundario { background: #eee; }
+        .chave-status { font-size: 0.75rem; margin-top: 2px; }
+        .sem-conversa { text-align: center; color: #999; padding: 40px; }
+        .icone { font-size: 3rem; margin-bottom: 10px; }
+        .btn-pequeno { width: auto; padding: 8px 12px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div class="tela tela-login ativa" id="telaLogin">
+    <div class="logo">
+        <span>🔐</span>
+        <h1>Mensageiro Criptografado</h1>
+        <p style="opacity: 0.8;">Apinator + Criptografia Ponta a Ponta</p>
+    </div>
+    <div class="form">
+        <label>Número de Celular</label>
+        <input type="tel" id="celular" placeholder="(00) 00000-0000" maxlength="15">
+        
+        <label>Seu @ de Usuário</label>
+        <input type="text" id="meuArroba" placeholder="ex: seu_nome">
+        
+        <button class="btn btn-principal" onclick="entrar()">🚀 Entrar / Criar Conta</button>
+        
+        <p class="aviso">
+            Suas mensagens são criptografadas antes de serem enviadas.<br>
+            Ninguém consegue ler, nem o Apinator.
+        </p>
+    </div>
+</div>
+
+<!-- TELA PRINCIPAL -->
+<div class="tela" id="telaPrincipal">
+    <div class="cabecalho">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" id="avatarMain">?</div>
+            <div>
+                <div style="font-weight:600;" id="nomeMain">Usuário</div>
+                <div class="status" id="statusWS">Desconectado</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button class="btn-secundario btn-pequeno" onclick="abrirPerfil()">⚙️ Perfil</button>
+            <button class="btn-secundario btn-pequeno" onclick="sair()">🚪 Sair</button>
+        </div>
+    </div>
+
+    <div class="novo-chat">
+        <input type="text" id="destArroba" placeholder="@ do destinatário (ex: amiga123)">
+        <button class="btn btn-primario" style="margin-top:4px;" onclick="iniciarConversa()">💬 Iniciar Conversa</button>
+    </div>
+
+    <div class="lista-contatos" id="listaContatos"></div>
+</div>
+
+<!-- TELA DE CONVERSA -->
+<div class="tela" id="telaConversa">
+    <div class="cabecalho">
+        <div class="voltar" onclick="voltar()">◀ Voltar</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" id="avatarDest">@</div>
+            <div>
+                <div style="font-weight:600;" id="nomeDest">---</div>
+                <div class="chave-status" id="chaveStatus">🔒 Aguardando chave...</div>
+            </div>
+        </div>
+        <div></div>
+    </div>
+
+    <div class="area-msg" id="areaMsg">
+        <div class="sem-conversa" id="semMsg">
+            <div class="icone">💬</div>
+            <p>Conversa iniciada</p>
+            <p style="font-size:0.85rem; margin-top:8px;">Configure a chave de criptografia para começar</p>
+        </div>
+    </div>
+
+    <div class="digitacao">
+        <input type="text" id="entradaMsg" placeholder="Digite sua mensagem..." onkeypress="if(event.key==='Enter')enviarMensagem()">
+        <button class="btn-enviar" onclick="enviarMensagem()">➤</button>
+    </div>
+</div>
+
+<!-- MODAL: INSERIR CHAVE DO DESTINATÁRIO -->
+<div class="modal" id="modalChave">
+    <div class="modal-conteudo">
+        <h3>🔑 Chave de Criptografia</h3>
+        <p>Cole a <strong>Chave Pública</strong> da pessoa abaixo:</p>
+        <input type="text" id="chaveDest" placeholder="Cole a chave aqui...">
+        <div class="botoes">
+            <button class="btn-secundario" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-primario" onclick="salvarChave()">✅ Salvar Chave</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: PERFIL E MINHA CHAVE -->
+<div class="modal" id="modalPerfil">
+    <div class="modal-conteudo">
+        <h3>🔐 Seu Perfil</h3>
+        <p><strong>@ Usuário:</strong> <span id="pArroba"></span></p>
+        <p style="margin-top:10px;"><strong>Chave Pública (compartilhe):</strong></p>
+        <p style="font-size:0.75rem; word-break:break-all; background:#f5f5f5; padding:8px; border-radius:6px;" id="pChavePub"></p>
+        <button class="btn btn-secundario" style="margin-top:8px;" onclick="copiarMinhaChave()">📋 Copiar Minha Chave</button>
+        <div class="botoes" style="margin-top:15px;">
+            <button class="btn-secundario" onclick="fecharModal()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==============================================
+// 🔑 SUAS CREDENCIAIS DO APINATOR — JÁ CONFIGURADAS
+// ==============================================
+const APINATOR_KEY = 'app_af704580a019ad966476d84f20753ed923ad15bf';
+const APINATOR_CLUSTER = 'us'; // se for Europa, mude para 'eu'
+
+// ==============================================
+// 🔐 SISTEMA DE CRIPTOGRAFIA
+// ==============================================
+class Criptografia {
+    constructor() { this.chaveAES = null; }
+
+    async gerarChaveCompartilhada() {
+        return crypto.subtle.generateKey(
+            { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+        );
+    }
+
+    async exportarChave(chave) {
+        const bruto = await crypto.subtle.exportKey('raw', chave);
+        return btoa(String.fromCharCode(...new Uint8Array(bruto)));
+    }
+
+    async importarChave(textoBase64) {
+        const bin = Uint8Array.from(atob(textoBase64), c => c.charCodeAt(0));
+        return crypto.subtle.importKey('raw', bin, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+    }
+
+    async codificar(texto, chave) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const codificado = new TextEncoder().encode(texto);
+        const encriptado = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv }, chave, codificado
+        );
+        const dados = new Uint8Array(encriptado);
+        return btoa(String.fromCharCode(...iv) + '||' + String.fromCharCode(...dados));
+    }
+
+    async decodificar(mensagemCodificada, chave) {
+        try {
+            const partes = atob(mensagemCodificada).split('||');
+            const iv = new Uint8Array(partes[0].split('').map(c => c.charCodeAt(0)));
+            const mensagem = new Uint8Array(partes[1].split('').map(c => c.charCodeAt(0)));
+            const decifrado = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv }, chave, mensagem
+            );
+            return new TextDecoder().decode(decifrado);
+        } catch {
+            return '❌ Não foi possível descriptografar — verifique a chave';
+        }
+    }
+}
+
+const cripto = new Criptografia();
+let apinClient = null;
+let usuario = {
+    celular: '', arroba: '',
+    chavePublica: '', chavePrivadaAES: null,
+    conversas: {} // @destinatario -> { chaveAES, mensagens[] }
+};
+let conversaAtual = null;
+
+// ==============================================
+// 🚀 CONEXÃO COM APINATOR
+// ==============================================
+async function conectar() {
+    apinClient = new Apinator.Apinator({
+        appKey: APINATOR_KEY,
+        cluster: APINATOR_CLUSTER
+    });
+
+    apinClient.on('connected', () => {
+        const el = document.getElementById('statusWS');
+        el.textContent = '✅ Conectado';
+        el.classList.add('conectado');
+        el.classList.remove('desconectado');
+    });
+
+    apinClient.on('disconnected', () => {
+        const el = document.getElementById('statusWS');
+        el.textContent = 'Desconectado';
+        el.classList.remove('conectado');
+        el.classList.add('desconectado');
+    });
+
+    await apinClient.connect();
+    console.log('✅ Conectado ao Apinator com sucesso!');
+}
+
+// ==============================================
+// 🔑 ENTRAR / CRIAR CONTA
+// ==============================================
+async function entrar() {
+    const celular = document.getElementById('celular').value.replace(/\D/g, '');
+    const arroba = document.getElementById('meuArroba').value.trim();
+
+    if (!celular || !arroba) {
+        return alert('⚠️ Preencha celular e @ de usuário!');
+    }
+
+    usuario.celular = celular;
+    usuario.arroba = arroba;
+
+    // Gera par de chaves se for novo
+    const salvo = localStorage.getItem('msgPrivado');
+    if (salvo) {
+        const dados = JSON.parse(salvo);
+        if (dados.arroba !== arroba || dados.celular !== celular) {
+            // Usuário diferente → gera novas chaves
+            const chave = await cripto.gerarChaveCompartilhada();
+            usuario.chavePrivadaAES = chave;
+            usuario.chavePublica = await cripto.exportarChave(chave);
+            usuario.conversas = {};
+        } else {
+            // Restaura dados salvos
+            usuario.chavePublica = dados.chavePublica;
+            usuario.conversas = dados.conversas || {};
+        }
+    } else {
+        // Primeiro acesso → gera chaves
+        const chave = await cripto.gerarChaveCompartilhada();
+        usuario.chavePrivadaAES = chave;
+        usuario.chavePublica = await cripto.exportarChave(chave);
+        usuario.conversas = {};
+    }
+
+    salvarDados();
+    await conectar();
+
+    // Atualiza interface
+    document.getElementById('avatarMain').textContent = arroba[0].toUpperCase();
+    document.getElementById('nomeMain').textContent = '@' + arroba;
+
+    trocarTela('telaPrincipal');
+    renderizarListaConversas();
+}
+
+function salvarDados() {
+    localStorage.setItem('msgPrivado', JSON.stringify({
+        celular: usuario.celular,
+        arroba: usuario.arroba,
+        chavePublica: usuario.chavePublica,
+        conversas: Object.fromEntries(
+            Object.entries(usuario.conversas).map(([dest, conv]) => [
+                dest,
+                {
+                    mensagens: conv.mensagens,
+                    chaveAES_publicada: conv.chaveAES_publicada || null
+                }
+            ])
+        )
+    }));
+}
+
+function carregarDados() {
+    const salvo = localStorage.getItem('msgPrivado');
+    if (!salvo) return;
+    const dados = JSON.parse(salvo);
+    usuario.celular = dados.celular;
+    usuario.arroba = dados.arroba;
+    usuario.chavePublica = dados.chavePublica;
+    usuario.conversas = dados.conversas || {};
+}
+
+// ==============================================
+// 💬 GERENCIAR CONVERSAS
+// ==============================================
+function iniciarConversa() {
+    let dest = document.getElementById('destArroba').value.trim();
+    if (!dest) return alert('Digite o @ da pessoa!');
+    if (!dest.startsWith('@')) dest = '@' + dest;
+    abrirConversa(dest);
+    document.getElementById('destArroba').value = '';
+}
+
+async function abrirConversa(destinatario) {
+    conversaAtual = destinatario;
+
+    // Cria conversa se não existir
+    if (!usuario.conversas[destinatario]) {
+        usuario.conversas[destinatario] = {
+            mensagens: [],
+            chaveAES: null,
+            chaveAES_exportada: null
+        };
+    }
+
+    // Inscreve no canal de mensagens
+    const nomeCanal = `chat-${destinatario}-${usuario.arroba}`;
+    const canal = apinClient.subscribe(nomeCanal);
+
+    canal.bind('mensagem_recebida', async (dados) => {
+        if (dados.remetente === '@' + usuario.arroba) return;
+        const conv = usuario.conversas[destinatario];
+        conv.mensagens.push({
+            de: dados.remetente,
+            texto: dados.mensagem,
+            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            enviada: false
+        });
+        salvarDados();
+        if (conversaAtual === destinatario) renderizarMensagens();
+    });
+
+    // Atualiza cabeçalho
+    document.getElementById('nomeDest').textContent = destinatario;
+    document.getElementById('avatarDest').textContent = destinatario[1].toUpperCase();
+
+    // Pede chave se não configurada
+    const conv = usuario.conversas[destinatario];
+    if (!conv.chaveAES_exportada) {
+        document.getElementById('chaveStatus').textContent = '⚠️ Chave necessária';
+        document.getElementById('modalChave').style.display = 'flex';
+    } else {
+        conv.chaveAES = await cripto.importarChave(conv.chaveAES_exportada);
+        document.getElementById('chaveStatus').textContent = '✅ Protegido';
+    }
+
+    trocarTela('telaConversa');
+    renderizarMensagens();
+}
+
+async function salvarChave() {
+    const chaveTexto = document.getElementById('chaveDest').value.trim();
+    if (!chaveTexto) return alert('Cole a chave!');
+
+    usuario.conversas[conversaAtual].chaveAES = await cripto.importarChave(chaveTexto);
+    usuario.conversas[conversaAtual].chaveAES_exportada = chaveTexto;
+    salvarDados();
+
+    fecharModal();
+    document.getElementById('chaveStatus').textContent = '✅ Protegido';
+    alert('🔐 Chave configurada!\n\n📤 Envie SUA chave pública para essa pessoa responder.');
+    renderizarMensagens();
+}
+
+// ==============================================
+// ✉️ ENVIAR E RECEBER MENSAGENS
+// ==============================================
+async function enviarMensagem() {
+    const input = document.getElementById('entradaMsg');
+    const texto = input.value.trim();
+    if (!texto || !conversaAtual) return;
+
+    const conv = usuario.conversas[conversaAtual];
+    if (!conv.chaveAES) {
+        return alert('⚠️ Configure a chave de criptografia primeiro!');
+    }
+
+    // 🔒 Criptografa a mensagem
+    const mensagemCriptografada = await cripto.codificar(texto, conv.chaveAES);
+
+    // Envia via Apinator
+    const nomeCanal = `chat-${conversaAtual}-${usuario.arroba}`;
+    apinClient.trigger(nomeCanal, 'mensagem_recebida', {
+        remetente: '@' + usuario.arroba,
+        destinatario: conversaAtual,
+        mensagem: mensagemCriptografada
+    });
+
+    // Salva localmente
+    conv.mensagens.push({
+        de: '@' + usuario.arroba,
+        texto: mensagemCriptografada,
+        original: texto,
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        enviada: true
+    });
+
+    input.value = '';
+    salvarDados();
+    renderizarMensagens();
+}
+
+async function renderizarMensagens() {
+    const area = document.getElementById('areaMsg');
+    const conv = usuario.conversas[conversaAtual];
+
+    if (!conv.mensagens.length) {
+        area.innerHTML = `
+            <div class="sem-conversa">
+                <div class="icone">💬</div>
+                <p>Conversa com ${conversaAtual}</p>
+                <p style="font-size:0.85rem; margin-top:8px;">Configure a chave e envie sua primeira mensagem!</p>
+            </div>
+        `;
+        return;
+    }
+
+    area.innerHTML = '';
+    for (const msg of conv.mensagens) {
+        let conteudo = msg.original || msg.texto;
+
+        if (!msg.enviada) {
+            if (conv.chaveAES) {
+                conteudo = await cripto.decodificar(msg.texto, conv.chaveAES);
+            } else {
+                conteudo = '🔒 Configure a chave para ver esta mensagem';
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = `msg ${msg.enviada ? 'enviada' : 'recebida'}`;
+        div.innerHTML = `
+            <div>${conteudo}</div>
+            <div class="hora">${msg.hora}</div>
+        `;
+        area.appendChild(div);
+    }
+    area.scrollTop = area.scrollHeight;
+}
+
+function renderizarListaConversas() {
+    const lista = document.getElementById('listaContatos');
+    lista.innerHTML = '';
+
+    if (Object.keys(usuario.conversas).length === 0) {
+        lista.innerHTML = `
+            <div class="sem-conversa" style="padding:40px;">
+                <p>Nenhuma conversa ainda</p>
+                <p style="font-size:0.85rem; margin-top:8px;">Digite o @ de alguém acima para começar</p>
+            </div>
+        `;
+        return;
+    }
+
+    for (const [dest, conv] of Object.entries(usuario.conversas)) {
+        const ultima = conv.mensagens.at(-1);
+        const el = document.createElement('div');
+        el.className = 'contato';
+        el.onclick = () => abrirConversa(dest);
+        el.innerHTML = `
+            <div class="avatar">${dest[1].toUpperCase()}</div>
+            <div class="dados">
+                <div class="nome">${dest}</div>
+                <div class="ultima">${ultima ? (ultima.original || '(mensagem criptografada)') : 'Sem mensagens'}</div>
+            </div>
+        `;
+        lista.appendChild(el);
+    }
+}
+
+// ==============================================
+// ⚙️ PERFIL E UTILITÁRIOS
+// ==============================================
+function abrirPerfil() {
+    document.getElementById('pArroba').textContent = '@' + usuario.arroba;
+    document.getElementById('pChavePub').textContent = usuario.chavePublica.slice(0, 100) + '...';
+    document.getElementById('modalPerfil').style.display = 'flex';
+}
+
+function copiarMinhaChave() {
+    navigator.clipboard.writeText(usuario.chavePublica).then(() => {
+        alert('✅ Chave copiada!\n\n📤 Envie este texto para a pessoa com quem quer conversar.');
+    });
+}
+
+function fecharModal() {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+}
+
+function voltar() {
+    conversaAtual = null;
+    trocarTela('telaPrincipal');
+    renderizarListaConversas();
+}
+
+function sair() {
+    if (confirm('Deseja sair? Suas conversas ficam salvas neste aparelho.')) {
+        if (apinClient) apinClient.disconnect();
+        localStorage.removeItem('msgPrivado');
+        location.reload();
+    }
+}
+
+function trocarTela(id) {
+    document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+    document.getElementById(id).classList.add('ativa');
+}
+
+// Formatação automática do celular
+document.getElementById('celular').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 0) v = '(' + v;
+    if (v.length > 3) v = v.slice(0, 3) + ') ' + v.slice(3);
+    if (v.length > 10) v = v.slice(0, 10) + '-' + v.slice(10, 15);
+    e.target.value = v;
+});
+
+// Auto-carregamento
+window.onload = () => {
+    carregarDados();
+    if (usuario.arroba) {
+        document.getElementById('celular').value = usuario.celular;
+        document.getElementById('meuArroba').value = usuario.arroba;
+        conectar().then(() => {
+            document.getElementById('avatarMain').textContent = usuario.arroba[0].toUpperCase();
+            document.getElementById('nomeMain').textContent = '@' + usuario.arroba;
+            trocarTela('telaPrincipal');
+            renderizarListaConversas();
+        });
+    }
+};
+</script>
+</body>
+</html>
